@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameStruct.h"
 #include "ItemActorComponent.generated.h"
 
 
@@ -24,6 +25,8 @@ public:
 public:	
 	// Sets default values for this component's properties
 	UItemActorComponent();
+
+	void Init(FItemStruct itemData);
 
 	void PushItem(TTuple<int, int> itemStoragePosition, bool itemStorageRosition);
 	void PullItem();

@@ -4,11 +4,11 @@
 #include "ItemActorComponent.h"
 
 // Sets default values for this component's properties
-UItemActorComponent::UItemActorComponent()
-{
-	itemSize.Get<0>() = 3;
-	itemSize.Get<1>() = 3;
+UItemActorComponent::UItemActorComponent() {};
 
+void UItemActorComponent::Init(FItemStruct itemData)
+{
+	itemSize = itemData.itemSize;
 	itemRotation = false;
 }
 
