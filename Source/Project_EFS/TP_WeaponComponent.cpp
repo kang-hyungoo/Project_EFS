@@ -15,6 +15,9 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 {
 	// Default offset from the character location for projectiles to spawn
 	MuzzleOffset = FVector(100.0f, 0.0f, 10.0f);
+	FireRate = 0.25f;
+
+	IsAutoShoot = true;
 }
 
 
@@ -22,8 +25,11 @@ void UTP_WeaponComponent::Fire()
 {
 	if (Character == nullptr || Character->GetController() == nullptr)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Find not character"));
 		return;
 	}
+
+	IsFire = true;
 
 	// Try and fire a projectile
 	if (ProjectileClass != nullptr)
@@ -31,6 +37,14 @@ void UTP_WeaponComponent::Fire()
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
+			auto timeElapsed = FireTimerHandle.IsValid() ? World->GetTimerManager().GetTimerElapsed(FireTimerHandle) : -1.0f;
+
+			if (0.0f < timeElapsed && timeElapsed < FireRate)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Already fire"));
+				return;
+			}
+
 			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
 			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
 			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
@@ -42,25 +56,68 @@ void UTP_WeaponComponent::Fire()
 	
 			// Spawn the projectile at the muzzle
 			World->SpawnActor<AProject_EFSProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+
+			// Fire Delay
+			World->GetTimerManager().SetTimer(FireTimerHandle, this, &UTP_WeaponComponent::FireDelay, FireRate, false);
+
+			// Try and play the sound if specified
+			if (FireSound != nullptr)
+			{
+				UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
+			}
+
+			// Try and play a firing animation if specified
+			if (FireAnimation != nullptr)
+			{
+				// Get the animation object for the arms mesh
+				UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
+				if (AnimInstance != nullptr)
+				{
+					AnimInstance->Montage_Play(FireAnimation, 1.f);
+				}
+			}
 		}
 	}
-	
-	// Try and play the sound if specified
-	if (FireSound != nullptr)
+}
+
+void UTP_WeaponComponent::StopFire()
+{
+	IsFire = false;
+}
+
+void UTP_WeaponComponent::FireDelay()
+{
+	if (!IsFire)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
+		UE_LOG(LogTemp, Warning, TEXT("StopFire"));
+		if (FireTimerHandle.IsValid())
+			FireTimerHandle.Invalidate();
+
+		return;
 	}
-	
-	// Try and play a firing animation if specified
-	if (FireAnimation != nullptr)
+
+	UWorld* const World = GetWorld();
+	if (World != nullptr)
 	{
-		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
-		if (AnimInstance != nullptr)
-		{
-			AnimInstance->Montage_Play(FireAnimation, 1.f);
-		}
+		if (IsAutoShoot && World->GetTimerManager().IsTimerActive(FireTimerHandle))
+			Fire();
 	}
+}
+
+void UTP_WeaponComponent::ChangeMode()
+{
+	UE_LOG(LogTemp, Warning, TEXT("ChangeMode Start"));
+
+	UWorld* const World = GetWorld();
+	if (World != nullptr)
+	{
+		if (World->GetTimerManager().IsTimerActive(FireTimerHandle))
+			return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("ChangeMode"));
+
+	IsAutoShoot = !IsAutoShoot;
 }
 
 void UTP_WeaponComponent::AttachWeapon(AProject_EFSCharacter* TargetCharacter)
@@ -91,6 +148,8 @@ void UTP_WeaponComponent::AttachWeapon(AProject_EFSCharacter* TargetCharacter)
 		{
 			// Fire
 			EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::Fire);
+			EnhancedInputComponent->BindAction(StopFireAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::StopFire);
+			EnhancedInputComponent->BindAction(ChageModeAction, ETriggerEvent::Triggered, this, &UTP_WeaponComponent::ChangeMode);
 		}
 	}
 }

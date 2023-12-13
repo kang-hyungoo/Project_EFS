@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineTypes.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "TP_WeaponComponent.generated.h"
 
@@ -38,6 +39,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputAction* FireAction;
 
+	/** Stop Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* StopFireAction;
+
+	/** ChageMode Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ChageModeAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	float FireRate;
+
 	/** Sets default values for this component's properties */
 	UTP_WeaponComponent();
 
@@ -49,6 +61,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void Fire();
 
+	/** Make the weapon Fire a Projectile */
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void FireDelay();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void StopFire();
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void ChangeMode();
+
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
@@ -57,4 +79,10 @@ protected:
 private:
 	/** The Character holding this weapon*/
 	AProject_EFSCharacter* Character;
+
+	bool IsAutoShoot = false;
+
+	bool IsFire = false;
+
+	FTimerHandle FireTimerHandle;
 };
